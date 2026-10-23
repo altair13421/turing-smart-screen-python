@@ -1,0 +1,18 @@
+# turing-slideshow runtime dependencies.
+#
+# These are the SAME packages used by the parent turing-smart-screen-python
+# project; if you already installed the parent project's requirements.txt
+# then there is nothing more to install here.
+#
+# Run:
+#   python3 -m venv venv
+#   . venv/bin/activate
+#   pip install -r requirements.txt
+#
+# Or, if your user-installed the parent project as a system package
+# (e.g. turing-smart-screen-python on the AUR), these are pulled in
+# automatically and you do not need this file.
+
+Pillow>=10.0.0
+pyserial>=3.5
+PyYAML>=6.0

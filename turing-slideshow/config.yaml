@@ -1,0 +1,144 @@
+# =====================================================================
+# turing-slideshow configuration file.
+# =====================================================================
+# Edit this file once and you are done. The slideshow re-reads this file
+# only on startup (it does NOT watch for changes), but it DOES re-scan
+# the images folder on every loop iteration, so newly added images
+# appear automatically on the next cycle.
+#
+# All paths below are relative to the turing-smart-screen-python repo
+# root (the parent of this folder), unless they are absolute.
+# ---------------------------------------------------------------------
+
+# Folder that holds your slideshow images. May be:
+#   * a path relative to the repo root (default)
+#   * an absolute path like /home/you/Pictures/slideshow
+#   * a path with ~ (your home dir will be expanded)
+images_folder: ./turing-slideshow/images
+
+# Seconds each slide stays on screen. 30 = calm wall-display feel.
+interval_seconds: 5
+
+# true  -> randomize slide order each pass through the folder
+# false -> strict alphabetical order (recommended for predictable rotation)
+shuffle: false
+
+# true  -> recurse into subfolders (./images/2024/, ./images/2025/, ...)
+# false -> top-level files only
+recursive: true
+
+# How images that don't match the screen resolution get scaled.
+#   contain  - fit entirely, centered, black bars fill remainder (no crop)
+#   cover    - fill screen entirely, crop overflow
+#   stretch  - resize to exactly match screen (may distort)
+#   native   - center as-is; if larger than screen, fall back to contain
+fit_mode: contain
+
+# RGB background color used behind non-fitted areas (contain/native modes).
+# Format: [R, G, B], 0..255 each.
+background_color: [0, 0, 0]
+
+# Software rotation applied AFTER fitting, BEFORE sending to the panel.
+# Use this if the parent library's SetOrientation() does nothing on your
+# screen (common on Turing rev. A — the panel doesn't actually rotate).
+# Values: 0, 90, 180, 270 (degrees, clockwise).
+#
+# Typical setup for a Turing rev. A 3.5" mounted widescreen:
+#   display.orientation: PORTRAIT   (panel's native orientation)
+#   rotate_image: 270               (or 90 - try both, pick what looks right)
+rotate_image: 90
+
+# --- Auto-orient (per-image rotation based on aspect ratio) ----------
+# When true, the slideshow inspects each file's aspect ratio and picks
+# the rotation that fits your widescreen-mounted panel best:
+#
+#   * Landscape image (wider than tall) -> uses `rotate_image`    (above)
+#   * Portrait  image (taller than wide) -> uses `portrait_rotation` (below)
+#
+# This is the right mode if your folder mixes landscape photos and
+# portrait photos and you want both to look correct on the same
+# widescreen-mounted panel.
+#
+# When false, every image uses `rotate_image` regardless of aspect.
+auto_orient: true
+
+# Rotation (degrees CW) applied to PORTRAIT images when auto_orient is
+# true. Typical values for a Turing rev. A 3.5" panel mounted widescreen
+# (cable on the right):
+#   0   - show portrait photos as-is, in the top half of the panel
+#         (they'll be small but upright; the bottom of the panel will
+#         be black bars from the contain fit)
+#   90  - rotate portrait photos 90° CW so they fill the widescreen
+#   270 - rotate portrait photos 270° CW (upside-down landscape)
+#
+# If you want every photo (landscape and portrait) to fill the entire
+# widescreen panel, set:
+#   rotate_image: 270
+#   auto_orient: true
+#   portrait_rotation: 270   # (or 90 — pick whichever way is upright)
+portrait_rotation: 0
+
+# --- Video playback ------------------------------------------------
+# When enabled, .mp4 / .avi / .mov / .mkv / .webm files in the folder
+# are played frame-by-frame. Each video plays for at most video_max_seconds
+# (then the slideshow moves on to the next file).
+#
+# Requires OpenCV (cv2). Install with:
+#   pip install opencv-python
+# or on Arch:
+#   sudo pacman -S python-opencv
+videos_enabled: true
+video_max_fps: 24        # cap playback at this FPS (lower = less CPU)
+video_max_seconds: 30    # play each video for at most this many seconds
+
+# --- Display / screen settings -------------------------------------
+
+display:
+  # Which screen revision to drive.
+  #   AUTO      - auto-detect by probing all supported classes (recommended)
+  #   A         - Turing 3.5" rev.A / UsbPCMonitor (CH340 USB-serial)
+  #   B         - Turing rev.B
+  #   C         - Turing rev.C
+  #   D         - Turing rev.D
+  #   TUR_USB   - Turing with native USB (no COM port)
+  #   WEACT_A   - WeAct Studio Display FS V1 rev.A
+  #   WEACT_B   - WeAct Studio Display FS V1 rev.B
+  #   SIMU      - simulated display (a window opens on the host)
+  revision: AUTO
+
+  # COM port to use (only for serial-based revisions A/B/C/D/WEACT_*).
+  #   AUTO     - auto-detect the port
+  #   COM3     - Windows explicit
+  #   /dev/ttyACM0 - Linux explicit
+  # Ignored for revision TUR_USB and SIMU.
+  com_port: AUTO
+
+  # Screen orientation.
+  #   PORTRAIT          - native (e.g. 320x480 on 3.5") (DEFAULT)
+  #   LANDSCAPE         - rotated 90deg (480x320 on 3.5") - may not work
+  #                       on Turing rev. A; use rotate_image: 270 instead
+  #   REVERSE_PORTRAIT  - upside-down portrait
+  #   REVERSE_LANDSCAPE - upside-down landscape
+  #
+  # For Turing rev. A: leave this on PORTRAIT and use rotate_image above
+  # to rotate the displayed image in software.
+  orientation: PORTRAIT
+
+  # Screen backlight brightness, 0..100. Some models ignore this.
+  brightness: 100
+
+  # Screen pixel dimensions in PORTRAIT orientation (the native orientation
+  # of the panel - orientation: LANDSCAPE above swaps them at display time).
+  # Defaults are the most common 3.5" panel (320x480). Change to match
+  # your panel, e.g. 5" -> 480x800, 8.8" -> 480x1920, etc.
+  width: 320
+  height: 480
+
+# --- Logging -------------------------------------------------------
+
+# Log level for the systemd journal / console.
+#   DEBUG   - verbose, shows every image name and screen detection step
+#   INFO    - normal, only startup + each slide shown
+#   WARNING - only problems
+#   ERROR   - only errors
+log_level: DEBUG

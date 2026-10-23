@@ -1,0 +1,6 @@
+# Drop your slideshow images in this folder.
+# Supported formats: .jpg .jpeg .png .bmp .gif .webp (case-insensitive)
+# Subfolders are scanned by default (set recursive: false in config.yaml
+# to limit to top-level files only).
+#
+# This file just keeps the empty folder in git.

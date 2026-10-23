@@ -1,0 +1,36 @@
+# =====================================================================
+# udev rules for turing-smart-screen-python supported smart screens.
+# =====================================================================
+# These rules do two things:
+#   1. Give every user on the system read/write access to the smart
+#      screen's serial port (so you don't need sudo to talk to it).
+#   2. Trigger a "change" event when the screen is plugged/unplugged,
+#      so the slideshow can recover (the systemd Restart=on-failure
+#      covers this).
+#
+# Vendor/Product IDs covered:
+#   1a86:5722  -> CH340 chip (Turing rev.A, UsbPCMonitor, XuanFang)
+#   1a86:5523   (CH341A-based, sometimes used)
+#   0483:5740  -> STM32 CDC (some Turing rev.D, XuanFang flagship)
+#   303a:4001  -> ESP32-S2 native USB (Turing TUR_USB variants)
+#
+# Installed by install.sh. You can also install manually with:
+#   sudo cp 99-turing-smart-screen.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+# =====================================================================
+
+# CH340 / CH341 based: Turing rev.A, UsbPCMonitor, XuanFang 3.5" rev.B
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5722", MODE="0666", GROUP="dialout", SYMLINK+="turing-screen"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5523", MODE="0666", GROUP="dialout", SYMLINK+="turing-screen"
+
+# STM32 CDC based: some Turing rev.D, XuanFang flagship with RGB
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0666", GROUP="dialout", SYMLINK+="turing-screen"
+
+# ESP32-S2 native USB: Turing USB variants (no separate tty, accessed via HID)
+# Note: those screens do not expose a tty; the rule is informational.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4001", MODE="0666", GROUP="dialout"
+
+# Generic fallback: any USB-CDC tty belonging to common USB-serial chips.
+# This is intentionally permissive; restrict if you prefer.
+SUBSYSTEM=="tty", ATTRS{bInterfaceClass}=="02", ATTRS{bInterfaceSubClass}=="02", MODE="0666", GROUP="dialout"
