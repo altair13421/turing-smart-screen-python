@@ -278,6 +278,99 @@ os.unlink(bad_cfg_path)
 
 
 # ---------------------------------------------------------------------
+# Software rotation tests
+# ---------------------------------------------------------------------
+print("\n=== software rotation tests ===")
+
+# 0° should be a no-op (same object, not even copied)
+src = make_image(100, 50, (10, 20, 30))
+out = slideshow.rotate_image_software(src, 0)
+check("0° returns same image", out is src)
+
+# 90° CW: a 100x50 image becomes 50x100
+out = slideshow.rotate_image_software(src, 90)
+check("90° swaps dimensions", out.size == (50, 100))
+
+# 270° CW (= 90° CCW): also swaps dimensions
+out = slideshow.rotate_image_software(src, 270)
+check("270° swaps dimensions", out.size == (50, 100))
+
+# 180°: dimensions preserved
+out = slideshow.rotate_image_software(src, 180)
+check("180° preserves dimensions", out.size == (100, 50))
+
+# 360° (= 0°): no-op
+out = slideshow.rotate_image_software(src, 360)
+check("360° treated as 0° (no-op)", out is src)
+
+# Color preservation: a known-colored pixel should still be present after rotation
+src = make_image(10, 10, (0, 0, 0))
+src.putpixel((0, 0), (255, 0, 0))  # top-left red
+out_90 = slideshow.rotate_image_software(src, 90)
+# After 90° CW, top-left pixel goes to top-right
+check("90° CW: top-left red moves to top-right",
+      out_90.getpixel((9, 0)) == (255, 0, 0))
+out_180 = slideshow.rotate_image_software(src, 180)
+# After 180°, top-left goes to bottom-right
+check("180°: top-left red moves to bottom-right",
+      out_180.getpixel((9, 9)) == (255, 0, 0))
+out_270 = slideshow.rotate_image_software(src, 270)
+# After 270° CW (= 90° CCW), top-left goes to bottom-left
+check("270° CW: top-left red moves to bottom-left",
+      out_270.getpixel((0, 9)) == (255, 0, 0))
+
+
+# ---------------------------------------------------------------------
+# Auto-orient tests
+# ---------------------------------------------------------------------
+print("\n=== auto-orient tests ===")
+
+# is_landscape helper
+check("is_landscape(800x600) -> True",
+      slideshow.is_landscape(make_image(800, 600)))
+check("is_landscape(600x800) -> False",
+      not slideshow.is_landscape(make_image(600, 800)))
+check("is_landscape(500x500 square) -> True (>=, edge case)",
+      slideshow.is_landscape(make_image(500, 500)))
+
+# effective_rotation_for: when auto_orient is OFF, always use base_rotation
+src_landscape = make_image(800, 600)
+src_portrait  = make_image(600, 800)
+check("auto_orient=False: landscape uses base_rotate",
+      slideshow.effective_rotation_for(src_landscape, base_rotation=270,
+                                        auto_orient=False, portrait_rotation=90)
+      == 270)
+check("auto_orient=False: portrait also uses base_rotate",
+      slideshow.effective_rotation_for(src_portrait, base_rotation=270,
+                                        auto_orient=False, portrait_rotation=90)
+      == 270)
+
+# effective_rotation_for: when auto_orient is ON, pick per-image
+check("auto_orient=True: landscape uses base_rotate",
+      slideshow.effective_rotation_for(src_landscape, base_rotation=270,
+                                        auto_orient=True, portrait_rotation=90)
+      == 270)
+check("auto_orient=True: portrait uses portrait_rotate",
+      slideshow.effective_rotation_for(src_portrait, base_rotation=270,
+                                        auto_orient=True, portrait_rotation=90)
+      == 90)
+check("auto_orient=True: portrait_rotation=0 leaves portrait upright",
+      slideshow.effective_rotation_for(src_portrait, base_rotation=270,
+                                        auto_orient=True, portrait_rotation=0)
+      == 0)
+
+# fit_dims_for_rotation: the canvas dims swap when rotating 90/270
+check("fit_dims for 0°   on 320x480 panel -> 320x480",
+      slideshow.fit_dims_for_rotation(0,   320, 480) == (320, 480))
+check("fit_dims for 180° on 320x480 panel -> 320x480",
+      slideshow.fit_dims_for_rotation(180, 320, 480) == (320, 480))
+check("fit_dims for 90°  on 320x480 panel -> 480x320 (swapped)",
+      slideshow.fit_dims_for_rotation(90,  320, 480) == (480, 320))
+check("fit_dims for 270° on 320x480 panel -> 480x320 (swapped)",
+      slideshow.fit_dims_for_rotation(270, 320, 480) == (480, 320))
+
+
+# ---------------------------------------------------------------------
 # Folder scanning tests
 # ---------------------------------------------------------------------
 print("\n=== folder scanning tests ===")
@@ -287,20 +380,28 @@ with tempfile.TemporaryDirectory() as tmpdir:
     (root / "a.jpg").write_bytes(b"x")
     (root / "b.PNG").write_bytes(b"x")
     (root / "c.txt").write_bytes(b"x")  # should be skipped
+    (root / "v.mp4").write_bytes(b"x")  # video, not picked up by default
     (root / "sub1").mkdir()
     (root / "sub1" / "d.gif").write_bytes(b"x")
     (root / "sub1" / "sub2").mkdir()
     (root / "sub1" / "sub2" / "e.WEBP").write_bytes(b"x")
+    (root / "sub1" / "sub2" / "f.MOV").write_bytes(b"x")  # video in subfolder
 
     imgs = slideshow.collect_images(root, recursive=True)
     names = sorted(p.name for p in imgs)
-    check("recursive: 4 images found (a, b, d, e)",
+    check("recursive, no videos: 4 images found (a, b, d, e)",
           names == ["a.jpg", "b.PNG", "d.gif", "e.WEBP"])
 
-    imgs = slideshow.collect_images(root, recursive=False)
-    names = sorted(p.name for p in imgs)
-    check("non-recursive: 2 images found (a, b)",
-          names == ["a.jpg", "b.PNG"])
+    all_files = slideshow.collect_images(root, recursive=True, include_videos=True)
+    names = sorted(p.name for p in all_files)
+    check("recursive, with videos: 6 files found (a, b, d, e, f.MOV, v.mp4)",
+          names == ["a.jpg", "b.PNG", "d.gif", "e.WEBP", "f.MOV", "v.mp4"])
+
+    # is_video() helper
+    check("is_video(.mp4) -> True", slideshow.is_video(Path("foo.mp4")))
+    check("is_video(.MP4) -> True (case-insensitive)", slideshow.is_video(Path("foo.MP4")))
+    check("is_video(.jpg) -> False", not slideshow.is_video(Path("foo.jpg")))
+    check("is_video(.txt) -> False", not slideshow.is_video(Path("foo.txt")))
 
     # Order should be alphabetical (lowercased path)
     imgs = slideshow.collect_images(root, recursive=True)
@@ -313,3 +414,4 @@ with tempfile.TemporaryDirectory() as tmpdir:
 # ---------------------------------------------------------------------
 print(f"\n=== Summary: {PASS} passed, {FAIL} failed ===")
 sys.exit(0 if FAIL == 0 else 1)
+

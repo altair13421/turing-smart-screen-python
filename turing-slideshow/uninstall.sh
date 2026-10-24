@@ -14,8 +14,8 @@ SERVICE_DST="/etc/systemd/system/turing-slideshow.service"
 UDEV_DST="/etc/udev/rules.d/99-turing-smart-screen.rules"
 
 if [[ $EUID -ne 0 ]]; then
-    echo "Please run as root (use: sudo $0)" >&2
-    exit 1
+  echo "Please run as root (use: sudo $0)" >&2
+  exit 1
 fi
 
 echo "[INFO]  Stopping turing-slideshow.service (if running)..."
@@ -31,6 +31,13 @@ echo "[INFO]  Removing $UDEV_DST..."
 rm -f "$UDEV_DST"
 udevadm control --reload-rules 2>/dev/null || true
 udevadm trigger 2>/dev/null || true
+
+# Restart ModemManager so it goes back to probing all USB-serial devices
+# (now that our ID_MM_DEVICE_IGNORE rule is gone).
+if systemctl is-active --quiet ModemManager 2>/dev/null; then
+  echo "[INFO]  Restarting ModemManager (back to default behaviour)..."
+  systemctl restart ModemManager 2>/dev/null || true
+fi
 
 systemctl daemon-reload
 echo "[OK]    turing-slideshow uninstalled."

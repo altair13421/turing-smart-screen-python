@@ -17,7 +17,7 @@
 images_folder: ./turing-slideshow/images
 
 # Seconds each slide stays on screen. 30 = calm wall-display feel.
-interval_seconds: 5
+interval_seconds: 30
 
 # true  -> randomize slide order each pass through the folder
 # false -> strict alphabetical order (recommended for predictable rotation)
@@ -46,7 +46,7 @@ background_color: [0, 0, 0]
 # Typical setup for a Turing rev. A 3.5" mounted widescreen:
 #   display.orientation: PORTRAIT   (panel's native orientation)
 #   rotate_image: 270               (or 90 - try both, pick what looks right)
-rotate_image: 90
+rotate_image: 0
 
 # --- Auto-orient (per-image rotation based on aspect ratio) ----------
 # When true, the slideshow inspects each file's aspect ratio and picks
@@ -60,7 +60,7 @@ rotate_image: 90
 # widescreen-mounted panel.
 #
 # When false, every image uses `rotate_image` regardless of aspect.
-auto_orient: true
+auto_orient: false
 
 # Rotation (degrees CW) applied to PORTRAIT images when auto_orient is
 # true. Typical values for a Turing rev. A 3.5" panel mounted widescreen
@@ -142,3 +142,4 @@ display:
 #   WARNING - only problems
 #   ERROR   - only errors
 log_level: DEBUG
+

@@ -16,3 +16,7 @@
 Pillow>=10.0.0
 pyserial>=3.5
 PyYAML>=6.0
+
+# Optional - only needed if you want video playback (.mp4/.avi/.mov/.mkv/.webm).
+# If absent, video files are silently skipped (images still work).
+opencv-python>=4.5.0

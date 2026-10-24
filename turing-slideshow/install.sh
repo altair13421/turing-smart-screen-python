@@ -102,15 +102,39 @@ fi
 ok "Parent library is importable."
 
 # ------------------------- dialout group -----------------------------
-warn "Skipping dialout group check (group not present on this distro)."
-warn "Relying on udev rule for /dev/ttyACM0 permissions (MODE=0666)."
+if ! id "$SLIDESHOW_USER" >/dev/null 2>&1; then
+  err "User $SLIDESHOW_USER does not exist."
+fi
+if ! id -nG "$SLIDESHOW_USER" | grep -qw dialout; then
+  warn "User $SLIDESHOW_USER is NOT in the 'dialout' group."
+  info "Adding $SLIDESHOW_USER to dialout..."
+  usermod -a -G dialout "$SLIDESHOW_USER"
+  warn "The group change only takes effect after the user logs out and back in."
+  warn "If the service fails to open the COM port, reboot or run 'su - $SLIDESHOW_USER'."
+else
+  ok "User $SLIDESHOW_USER is already in the dialout group."
+fi
 
 # ------------------------- udev rules --------------------------------
 info "Installing udev rules -> /etc/udev/rules.d/99-turing-smart-screen.rules"
 cp "$UDEV_SRC" /etc/udev/rules.d/99-turing-smart-screen.rules
 udevadm control --reload-rules || true
 udevadm trigger || true
-ok "udev rules installed."
+ok "udev rules installed (includes ModemManager ignore + USB autosuspend off)."
+
+# ------------------------- ModemManager -------------------------------
+# ModemManager probes every USB-serial device at login, sending AT
+# commands that scramble the screen and turn it off. The udev rule
+# above sets ID_MM_DEVICE_IGNORE=1, which ModemManager respects - but
+# only after a restart. If ModemManager is running, restart it so the
+# new rule takes effect immediately.
+if systemctl is-active --quiet ModemManager 2>/dev/null; then
+  info "ModemManager is running - restarting it to apply ID_MM_DEVICE_IGNORE."
+  systemctl restart ModemManager || true
+  ok "ModemManager restarted - it will no longer probe the smart screen."
+else
+  info "ModemManager is not running - no action needed."
+fi
 
 # ------------------------- systemd unit ------------------------------
 SERVICE_DST="/etc/systemd/system/turing-slideshow.service"
